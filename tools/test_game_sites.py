@@ -197,6 +197,27 @@ def main():
             check(False, f'{name}: mismatched opcode accepted')
         except AssertionError:
             check(True, f'{name}: mismatched opcode refused')
+
+    # Korok map and minimap native compatibility: mismatched guest instructions
+    # must not be accepted, and each replacement keeps the intended A64 effect.
+    korok_words = [
+        ('korok_uncollected_a', 0x1a9f1129, 'COND_EQ(c)'),
+        ('korok_minimap_update_a', 0x34000008, None),
+        ('korok_minimap_update_b', 0x35000008, None),
+        ('korok_minimap_skip_visible', 0x14000003, 'c->pc ='),
+        ('korok_minimap_zoom', 0x52800009, 'c->x[9] = 1u'),
+        ('korok_minimap_refresh', 0x34000008, None),
+    ]
+    for name, word, fragment in korok_words:
+        g = SimpleNamespace(base=BASE, nso=SimpleNamespace(image=struct.pack('<I', word)))
+        code = patches.PATCHES[name](g, BASE)
+        check(fragment is None or fragment in code, f'{name}: replacement preserves its Korok behavior')
+        g.nso.image = struct.pack('<I', NOP)
+        try:
+            patches.PATCHES[name](g, BASE)
+            check(False, f'{name}: mismatched opcode accepted')
+        except AssertionError:
+            check(True, f'{name}: mismatched opcode refused')
     print(f'ok: {checks} checks')
 
 

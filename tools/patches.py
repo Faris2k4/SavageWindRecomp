@@ -683,6 +683,35 @@ def _pc_map_focus(position):
                 f'if (rt_pc_map_focus(c, {int(position)})) return; {prologue} }}')
     return patch
 
+
+# The Korok map icon normally shows only the found flag.  The uncollected
+# variant changes each CSEL from NE to EQ; this also makes already-found
+# Koroks disappear just as the save flag is read.
+def _korok_uncollected(gen, a):
+    assert _word(gen, a) == 0x1a9f1129, hex(_word(gen, a))  # csel w9, w9, wzr, ne
+    return ('{ uint32_t w9 = (uint32_t)c->x[9]; '
+            'c->x[9] = COND_EQ(c) ? w9 : 0u; }'
+            f'  /* {a:#x}: replaced csel w9,w9,wzr,ne with EQ behavior */')
+
+
+def _korok_minimap_nop(gen, a):
+    w = _word(gen, a)
+    assert w & 0x7c000000 == 0x34000000, hex(w)  # cbz/cbnz wX, <displacement>
+    return (f'{{ }}  /* {a:#x}: nopped Korok minimap guard */')
+
+
+def _korok_minimap_skip_visible(gen, a):
+    w = _word(gen, a)
+    assert w & 0xfc000000 == 0x14000000, hex(w)  # b <setVisible(false)>
+    return (f'{{ c->pc = {a + 24:#x}ull; rt_dispatch(c); }}  '
+            f'/* {a:#x}: skip setVisible(false) for Korok icons */')
+
+
+def _korok_minimap_zoom(gen, a):
+    w = _word(gen, a)
+    assert w & 0xff80001f == 0x52800009, hex(w)  # movz w9, #0
+    return (f'{{ c->x[9] = 1u; }}  /* {a:#x}: mov w9,#1 */')
+
 # Placed actors' traverse distance (1.9.0 0x70010a4640, 1.8.2 0x7000f908b0): how far from the camera an actor placed
 # on the map is created (trees and bushes 150 m, rocks and buildings 300-3000 m, the full model of a building with a
 # "_Far" version ~500 m, enemies 150 m). It is the actor's traverseDist (ActorInfo; 100 when unset) times a scale: the
@@ -1000,6 +1029,13 @@ PATCHES = {
     'pc_map_focus': _pc_map_focus(False),
     'pc_map_focus_target': _pc_map_focus(True),
     'pc_map_focus_now': _pc_map_focus(True),
+    'korok_uncollected_a': _korok_uncollected,
+    'korok_uncollected_b': _korok_uncollected,
+    'korok_minimap_update_a': _korok_minimap_nop,
+    'korok_minimap_update_b': _korok_minimap_nop,
+    'korok_minimap_skip_visible': _korok_minimap_skip_visible,
+    'korok_minimap_zoom': _korok_minimap_zoom,
+    'korok_minimap_refresh': _korok_minimap_nop,
     'pc_button_group': _pc_button_group,
     'pc_cursor_manager': _pc_cursor_manager,
     'gyro_scene_actor': _gyro_scene_actor,
