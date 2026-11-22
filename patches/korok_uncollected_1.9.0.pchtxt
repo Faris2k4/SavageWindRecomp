@@ -1,0 +1,17 @@
+@nsobid-CD57B23FA4BBAD65803D9788C01821EE
+
+# The Legend of Zelda: Breath of the Wild [01007EF00011E000] v1.9.0 - map shows koroks NOT found yet
+# Vanilla already has a map icon for every korok (MapMgr pool +0x54138, from Static KorokLocation) and
+# shows it only when the korok's flag is set (found). The korok icon class (vtable 0x1CDC870) updates
+# its "draw" bit 0x80 in two methods (slots 11/12: 0xD7EE10, 0xD7EE84):
+#     bit 0x80 = getBool(entry->handle) (0xD349D0)   ->  csel w9, w9, wzr, ne
+# Flipping ne -> eq draws the icon while the korok is NOT found; it disappears once found.
+# Koroks found before install are hidden too (same save flag). Only korok icons are affected.
+
+@flag print_values
+@flag offset_shift 0x100
+
+@enabled
+00D7EE58 29019F1A
+00D7EECC 29019F1A
+@stop

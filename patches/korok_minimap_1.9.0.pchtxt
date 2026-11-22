@@ -1,0 +1,23 @@
+@nsobid-CD57B23FA4BBAD65803D9788C01821EE
+
+# The Legend of Zelda: Breath of the Wild [01007EF00011E000] v1.9.0 - korok icons on the HUD minimap (experiment)
+# Use together with patches/korok_uncollected_1.9.0.pchtxt. The minimap is the same map screen in "mini" mode;
+# [0x1E17EF8]+0x848 == 0 means minimap. The korok icon class (vtable 0x1CDC870) blocks itself there:
+# 00D7EE2C / 00D7EEA0  update methods (slots 11/12): cbz -> clear draw bit 0x80 without reading the flag  -> nop
+# 00D7EFAC             slot 15: minimap -> setVisible(false) (vfunc +0xC0)                              -> always skip
+# 00D88C9C             map screen update 0xD88C70: the korok icon list (+0x360) is updated only on the full
+#                      map (cbz) -> nop, so the minimap keeps them after the inventory was opened
+# 00D7EF4C             korok slot 13: visibility table 0x16DA0E8[zoom level][category 11] allows koroks only at
+#                      the closest full-map zoom (and not on the minimap) -> mov w9,#1: every zoom level + minimap
+# Only korok icons are affected.
+
+@flag print_values
+@flag offset_shift 0x100
+
+@enabled
+00D7EE2C 1F2003D5
+00D7EEA0 1F2003D5
+00D7EFAC 06000014
+00D7EF4C 29008052
+00D88C9C 1F2003D5
+@stop
